@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPS BUS TRACKING</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
+        .header { background: #075E54; color: white; padding: 12px; text-align: center; font-weight: bold; z-index: 1001; position: relative; }
+        #map { height: calc(100vh - 45px); width: 100%; z-index: 1; background: #f0f0f0; }
+        .info-card { 
+            position: absolute; top: 70px; left: 15px; right: 15px; 
+            background: white; padding: 12px; border-radius: 10px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; 
+            border-left: 5px solid #075E54; display: flex; justify-content: space-between; align-items: center;
+        }
+        .view-toggle { position: absolute; top: 145px; right: 15px; z-index: 1000; background: white; padding: 5px; border-radius: 8px; display: flex; flex-direction: column; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);}
+        .view-toggle button { padding: 8px 12px; border: none; background: #f0f0f0; cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 5px; }
+        .view-toggle button.active { background: #075E54; color: white; }
+        .status-dot { height: 10px; width: 10px; background-color: #25D366; border-radius: 50%; display: inline-block; margin-right: 5px; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="header">SAGAR PUBLIC SCHOOL - LIVE</div>
+
+<div class="info-card">
+    <div>
+        <b style="color:#075E54; font-size: 16px;" id="busName">🚌 BUS-01</b><br>
+        <small id="tm" style="color:gray;">Connecting...</small>
+    </div>
+    <div style="text-align: right;">
+        <span id="sp" style="font-weight: bold; color: #333;">0 km/h</span><br>
+        <small style="color: #25D366;"><span class="status-dot"></span>Live</small>
+    </div>
+</div>
+
+<div class="view-toggle">
+    <button id="btnNormal" class="active" onclick="switchMap('normal')">Normal</button>
+    <button id="btnSat" onclick="switchMap('sat')">Satellite</button>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // --- SETTINGS ---
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWvUgEMar_P-76fGjqFjFKe56Xm1kvuw7LOpZ-we81aCKbSwHCPiak5ezE84FvTMev/exec"; 
+    // ----------------
+
+    var map, marker, normalLayer, satLayer;
+    var firstLoad = true;
+
+    function initMap() {
+        map = L.map('map', { zoomControl: false }).setView([25.6127, 85.1588], 16);
+        
+        normalLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        satLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+            subdomains:['mt0','mt1','mt2','mt3'], maxZoom: 20
+        });
+
+        var busIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048313.png',
+            iconSize: [40, 40], iconAnchor: [20, 20]
+        });
+
+        marker = L.marker([25.6127, 85.1588], { icon: busIcon }).addTo(map);
+        
+        fetchData();
+        setInterval(fetchData, 5000); 
+    }
+
+    function switchMap(type) {
+        if (type === 'sat') {
+            if (!map.hasLayer(satLayer)) { map.addLayer(satLayer); map.removeLayer(normalLayer); }
+            document.getElementById('btnSat').className = 'active';
+            document.getElementById('btnNormal').className = '';
+        } else {
+            if (!map.hasLayer(normalLayer)) { map.addLayer(normalLayer); map.removeLayer(satLayer); }
+            document.getElementById('btnNormal').className = 'active';
+            document.getElementById('btnSat').className = '';
+        }
+    }
+
+    async function fetchData() {
+        try {
+            const response = await fetch(SCRIPT_URL);
+            const res = await response.json();
+
+            if (!res || res.lat === "---") return;
+
+            var lat = parseFloat(res.lat);
+            var lng = parseFloat(res.lng);
+            var newPos = [lat, lng];
+
+            document.getElementById('sp').innerText = res.speed;
+            document.getElementById('tm').innerText = "Update: " + res.time;
+            document.getElementById('busName').innerText = "🚌 " + res.busId;
+
+            marker.setLatLng(newPos);
+            if (firstLoad) {
+                map.setView(newPos, 17);
+                firstLoad = false;
+            }
+        } catch (error) {
+            console.log("Error fetching data:", error);
+            document.getElementById('tm').innerText = "Offline/Error";
+        }
+    }
+
+    window.onload = initMap;
+</script>
+</body>
+</html>
