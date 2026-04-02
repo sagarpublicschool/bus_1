@@ -33,7 +33,7 @@
     </div>
     <div style="text-align: right;">
         <span id="sp" style="font-weight: bold; color: #333;">0 km/h</span><br>
-        <small style="color: #25D366;"><span class="status-dot"></span>Live</small>
+        <small id="liveStatus" style="color: #25D366;"><span class="status-dot"></span>Live</small>
     </div>
 </div>
 
@@ -47,16 +47,13 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // --- SETTINGS ---
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3RQv1lQwkzFWSm_16-ageQEe_Mao45s7JvB9Tjb3YuaxnpWh6f22l-y6QncMakB-6/exec"; 
-    // ----------------
 
     var map, marker, normalLayer, satLayer;
     var firstLoad = true;
 
     function initMap() {
         map = L.map('map', { zoomControl: false }).setView([25.6127, 85.1588], 16);
-        
         normalLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         satLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
             subdomains:['mt0','mt1','mt2','mt3'], maxZoom: 20
@@ -86,28 +83,38 @@
     }
 
     async function fetchData() {
+        if (!navigator.onLine) return; 
         try {
             const response = await fetch(SCRIPT_URL);
             const res = await response.json();
 
-            if (!res || res.lat === "---") return;
+            if (!res || res.lat === "---") {
+                document.getElementById('liveStatus').style.color = "orange";
+                document.getElementById('liveStatus').innerHTML = "Stopped";
+                return;
+            }
 
             var lat = parseFloat(res.lat);
             var lng = parseFloat(res.lng);
-            var newPos = [lat, lng];
-
-            document.getElementById('sp').innerText = res.speed;
+            
+            // Problem 1 fix: Ensure speed display
+            let s = res.speed;
+            document.getElementById('sp').innerText = s.includes("km") ? s : s + " km/h";
+            
+            // Problem 2 fix: Persistent time
             document.getElementById('tm').innerText = "Update: " + res.time;
             document.getElementById('busName').innerText = "🚌 " + res.busId;
+            document.getElementById('liveStatus').style.color = "#25D366";
+            document.getElementById('liveStatus').innerHTML = '<span class="status-dot"></span>Live';
 
-            marker.setLatLng(newPos);
+            marker.setLatLng([lat, lng]);
             if (firstLoad) {
-                map.setView(newPos, 17);
+                map.setView([lat, lng], 17);
                 firstLoad = false;
             }
         } catch (error) {
-            console.log("Error fetching data:", error);
-            document.getElementById('tm').innerText = "Offline/Error";
+            // Problem 3 (JS side): Error silent handle
+            console.log("Sync error");
         }
     }
 
