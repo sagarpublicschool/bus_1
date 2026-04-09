@@ -48,6 +48,7 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.min.js"></script>
 
 <script>
+    // Aapki Script URL
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYFtkg5bFhsEj7J-NxZjuqWY-IgIRTGnV2C5OjOa2kXOs7JJzYTrPYzWgNyT2y8qC7/exec"; 
 
     var map, marker, normalLayer, satLayer;
@@ -61,13 +62,18 @@
             subdomains:['mt0','mt1','mt2','mt3'], maxZoom: 20
         });
 
+        // Naya Top-View Bus Icon (Yeh ghumne par sahi dikhta hai)
         var busIcon = L.icon({
-            iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048313.png',
-            iconSize: [40, 40], iconAnchor: [20, 20]
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
+            iconSize: [35, 35],
+            iconAnchor: [17, 17], // Center of the icon
+            rotationOrigin: 'center center'
         });
 
-        // Marker mein icon rotation enable kiya
-        marker = L.marker([25.6127, 85.1588], { icon: busIcon, rotationAngle: 0 }).addTo(map);
+        marker = L.marker([25.6127, 85.1588], { 
+            icon: busIcon, 
+            rotationAngle: 0 
+        }).addTo(map);
         
         fetchData();
         setInterval(fetchData, 5000); 
@@ -97,21 +103,22 @@
 
             var lat = parseFloat(res.lat);
             var lng = parseFloat(res.lng);
-            var angle = parseFloat(res.bearing) || 0; // Bearing data liya
+            var angle = parseFloat(res.bearing) || 0; 
             var newPos = [lat, lng];
 
-            let speedValue = res.speed.toString().toLowerCase();
-            document.getElementById('sp').innerText = speedValue.includes("km") ? speedValue : speedValue + " km/h";
-
+            document.getElementById('sp').innerText = res.speed;
             document.getElementById('tm').innerText = "Last Update: " + res.time;
             document.getElementById('busName').innerText = "🚌 " + res.busId;
             
             document.getElementById('liveText').style.color = "#25D366";
             document.getElementById('liveText').innerHTML = '<span class="status-dot"></span>Live';
 
-            // Marker update with Rotation
+            // Position Update
             marker.setLatLng(newPos);
-            marker.setRotationAngle(angle); // Icon ko moad diya
+            
+            // Rotation Update: Leaflet rotatedmarker use karke
+            // Kuch icons 90 degree offset hote hain, agar bus side mein chale toh angle + 90 try karein
+            marker.setRotationAngle(angle); 
 
             if (firstLoad) {
                 map.setView(newPos, 17);
